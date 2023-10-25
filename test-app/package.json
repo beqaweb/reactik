@@ -1,28 +1,24 @@
 {
-  "name": "reactik",
-  "version": "0.0.1",
-  "description": "React library",
+  "name": "@reactik/test-app",
+  "version": "1.0.0",
+  "description": "App for testing",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "webpack",
-    "start": "webpack --watch",
-    "prerelease": "npm run build",
-    "release": "npm run prerelease && np --tag latest"
+    "start": "webpack serve --open --config webpack.config.js"
   },
-  "peerDependencies": {
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.32",
     "@types/react-dom": "^18.2.14",
-    "np": "^8.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "html-webpack-plugin": "^5.5.3",
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
   },
   "author": "beqaweb",
   "license": "ISC",

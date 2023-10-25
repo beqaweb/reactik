@@ -1,14 +1,13 @@
 const path = require('path');
 
 module.exports = {
-  mode: 'production',
+  mode: 'development',
   entry: path.resolve(__dirname, 'src/index.ts'),
   output: {
-    filename: 'index.js',
+    filename: 'index.dev.js',
     path: path.resolve(__dirname, 'dist'),
-    libraryTarget: 'umd',
-    library: 'reactik',
   },
+  devtool: 'inline-source-map',
   module: {
     rules: [
       {
@@ -20,9 +19,5 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
-  },
-  externals: {
-    react: 'react',
-    react: 'react-dom',
   },
 };

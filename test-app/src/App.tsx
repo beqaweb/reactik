@@ -1,6 +1,8 @@
-import React from "react";
+import React from 'react';
 
-export function App() {
+interface Props extends React.PropsWithChildren {}
+
+export function App({ children }: Props) {
   return (
     <div>
       <h1>Reactik app</h1>
