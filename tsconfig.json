@@ -1,0 +1,19 @@
+{
+  "include": ["src", ".eslintrc"],
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "strict": true,
+    "module": "esnext",
+    "target": "es5",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "skipLibCheck": true,
+    "declaration": false,
+    "lib": ["esnext", "dom"],
+    "jsx": "react",
+    "sourceMap": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+  }
+}

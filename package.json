@@ -1,0 +1,43 @@
+{
+  "name": "reactik",
+  "version": "0.0.1",
+  "description": "React library",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsdx build --entry ./src/index.ts",
+    "watch": "tsdx watch --transpileOnly --entry ./src/index.ts",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "prerelease": "npm run build",
+    "release": "npm run prerelease && np --tag latest"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
+  },
+  "devDependencies": {
+    "np": "^8.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.2.2"
+  },
+  "author": "beqaweb",
+  "license": "ISC",
+  "repository": {
+    "url": "git+https://github.com/beqaweb/reactik.git",
+    "type": "git"
+  },
+  "bugs": {
+    "url": "https://github.com/beqaweb/reactik/issues"
+  },
+  "keywords": [
+    "reactik",
+    "react",
+    "library",
+    "beqaweb"
+  ],
+  "engines": {
+    "node": ">=12.0.0",
+    "npm": ">=6.0.0"
+  }
+}
