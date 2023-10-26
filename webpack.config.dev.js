@@ -1,23 +1,11 @@
 const path = require('path');
+const { merge } = require('webpack-merge');
+const prodConfig = require('./webpack.config');
 
-module.exports = {
+module.exports = merge(prodConfig, {
   mode: 'development',
-  entry: path.resolve(__dirname, 'src/index.ts'),
-  output: {
-    filename: 'index.dev.js',
-    path: path.resolve(__dirname, 'dist'),
-  },
   devtool: 'inline-source-map',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
+  watchOptions: {
+    ignored: /node_modules|test-app|dist/,
   },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
-};
+});

@@ -1,4 +1,5 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -9,6 +10,16 @@ module.exports = {
     libraryTarget: 'umd',
     library: 'reactik',
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, 'src/types.ts'),
+          to: path.resolve(__dirname, 'dist/index.d.ts'),
+        },
+      ],
+    }),
+  ],
   module: {
     rules: [
       {
@@ -21,8 +32,8 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
-  externals: {
-    react: 'react',
-    react: 'react-dom',
-  },
+  // externals: {
+  //   react: 'react',
+  //   react: 'react-dom',
+  // },
 };
