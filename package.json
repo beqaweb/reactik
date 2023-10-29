@@ -9,7 +9,7 @@
     "build": "webpack --config webpack.config.js",
     "start": "webpack --watch --config webpack.config.dev.js",
     "prerelease": "rimraf dist && npm run build",
-    "release": "npm run prerelease && np --tag latest"
+    "release": "np --tag latest"
   },
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
