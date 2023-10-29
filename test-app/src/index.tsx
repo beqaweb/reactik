@@ -1,6 +1,5 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ServicesProvider } from 'reactik';
+import { ModalProvider, ServicesProvider } from 'reactik';
 
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -15,6 +14,8 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <ServicesProvider services={serviceContainer.services}>
-    <App />
+    <ModalProvider>
+      <App />
+    </ModalProvider>
   </ServicesProvider>,
 );

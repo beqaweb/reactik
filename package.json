@@ -29,7 +29,7 @@
     "webpack-merge": "^5.10.0"
   },
   "author": "beqaweb",
-  "license": "ISC",
+  "license": "MIT",
   "repository": {
     "url": "git+https://github.com/beqaweb/reactik.git",
     "type": "git"
