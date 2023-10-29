@@ -1,16 +1,27 @@
-import React from 'react';
-import { createServiceContainer } from 'reactik';
+import { useEffect, useState } from 'react';
 
-interface Props extends React.PropsWithChildren {}
+import { serviceContainer } from './services';
+import { Todo } from './services/TodoService';
 
-const container = createServiceContainer({
-  services: {},
-});
+export function App() {
+  const [todos, setTodos] = useState<Todo[]>([]);
 
-export function App({ children }: Props) {
+  const todoService = serviceContainer.useService('todo');
+
+  useEffect(() => {
+    todoService.getTodoList().then((res) => {
+      setTodos(res.items);
+    });
+  }, []);
+
   return (
     <div>
       <h1>Reactik app</h1>
+      <ul>
+        {todos.map((item) => (
+          <li key={item.id}>{item.title}</li>
+        ))}
+      </ul>
     </div>
   );
 }

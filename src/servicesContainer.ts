@@ -19,14 +19,14 @@ const ServiceContainerContext = createContext<
   services: {},
 });
 
-interface ServicesContextProvider<T extends Services>
+interface ServicesContextProvider<T extends Services = Services>
   extends PropsWithChildren {
   services: T;
 }
 
-export const ServicesProvider = <T extends Services>(
-  props: ServicesContextProvider<T>,
-) => {
+export const ServicesProvider = (
+  props: ServicesContextProvider,
+): JSX.Element => {
   const { children, services } = props;
   const value = useMemo(() => ({ services }), [services]);
   return createElement(ServiceContainerContext.Provider, { value }, children);

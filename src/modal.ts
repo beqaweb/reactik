@@ -6,14 +6,14 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
-import ReactDOM from "react-dom";
+} from 'react';
+import ReactDOM from 'react-dom';
 
 interface DefaultModalProps {
   open: boolean;
 }
 
-export interface ModalProps<D, R> {
+export interface ModalProps<D = undefined, R = undefined> {
   data: D;
   modalProps: DefaultModalProps;
   close: (result?: R) => void;
@@ -49,7 +49,7 @@ interface ModalContextValue {
     modalId: string,
     component: React.ComponentType,
     data: unknown,
-    resolver: (result?: unknown) => void
+    resolver: (result?: unknown) => void,
   ) => void;
   close: (modalId: string, result?: unknown) => void;
 }
@@ -72,11 +72,11 @@ const ModalContext = createContext<ModalContextValue>({
 export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
   children,
 }) => {
-  const modalComponentsRef = useRef<ModalContextValue["modalComponents"]>({});
-  const modalResolversRef = useRef<ModalContextValue["modalResolvers"]>({});
+  const modalComponentsRef = useRef<ModalContextValue['modalComponents']>({});
+  const modalResolversRef = useRef<ModalContextValue['modalResolvers']>({});
 
   const [modalStates, setModalStates] = useState<
-    ModalContextValue["modalStates"]
+    ModalContextValue['modalStates']
   >({});
 
   const setModalState = useCallback((modalId: string, newState: ModalState) => {
@@ -91,7 +91,7 @@ export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
       modalId: string,
       component: React.ComponentType,
       data: unknown,
-      resolver: (result?: unknown) => void
+      resolver: (result?: unknown) => void,
     ) => {
       modalComponentsRef.current = {
         ...modalComponentsRef.current,
@@ -110,7 +110,7 @@ export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
         },
       }));
     },
-    []
+    [],
   );
 
   const close = useCallback((modalId: string, result?: unknown) => {
@@ -133,11 +133,11 @@ export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
       open,
       close,
     }),
-    [modalStates, setModalState, open, close]
+    [modalStates, setModalState, open, close],
   );
 
   const modalsPortalElement = useMemo(() => {
-    const div = window.document.createElement("div");
+    const div = window.document.createElement('div');
     window.document.body.appendChild(div);
     return div;
   }, []);
@@ -153,7 +153,7 @@ export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
         close: (result?: unknown) => close(modalId, result),
       };
       return createElement(component, props);
-    }
+    },
   );
 
   const portal = ReactDOM.createPortal(modals, modalsPortalElement);
@@ -162,13 +162,13 @@ export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
     ModalContext.Provider,
     { value: providerValue },
     children,
-    portal
+    portal,
   );
 };
 
 export const useModal = <D, R>(
   modalComponent: React.ComponentType<ModalProps<D, R>>,
-  options?: UseModalOptions<D>
+  options?: UseModalOptions<D>,
 ): UseModal<D, R> => {
   const context = useContext(ModalContext);
 
@@ -185,7 +185,7 @@ export const useModal = <D, R>(
         modalId,
         modalComponent as React.ComponentType,
         options?.data || data,
-        resolve as (result?: unknown) => void
+        resolve as (result?: unknown) => void,
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,6 +196,6 @@ export const useModal = <D, R>(
       close,
       open,
     }),
-    [close, open]
+    [close, open],
   );
 };

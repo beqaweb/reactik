@@ -1,13 +1,14 @@
 {
   "name": "reactik",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "React library",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "start": "webpack --watch --config webpack.config.dev.js",
-    "prerelease": "npm run build",
+    "prerelease": "rimraf dist && npm run build",
     "release": "npm run prerelease && np --tag latest"
   },
   "peerDependencies": {
@@ -19,8 +20,7 @@
     "@types/react-dom": "^18.2.14",
     "copy-webpack-plugin": "^11.0.0",
     "np": "^8.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "rimraf": "^5.0.5",
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
     "webpack": "^5.89.0",

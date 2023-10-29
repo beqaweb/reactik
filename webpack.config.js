@@ -32,8 +32,8 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
-  // externals: {
-  //   react: 'react',
-  //   react: 'react-dom',
-  // },
+  externals: {
+    react: 'react',
+    'react-dom': 'react-dom',
+  },
 };
