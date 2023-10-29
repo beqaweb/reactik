@@ -1,27 +1,45 @@
 import { useEffect, useState } from 'react';
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Typography,
+} from '@mui/material';
 
 import { serviceContainer } from './services';
-import { Todo } from './services/TodoService';
+import { Friend } from './services/FriendService';
+
+function nameToChildren(name: string) {
+  return name.split(' ').map((item) => item[0]);
+}
 
 export function App() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<Friend[]>([]);
 
-  const todoService = serviceContainer.useService('todo');
+  const friendService = serviceContainer.useService('friendService');
 
   useEffect(() => {
-    todoService.getTodoList().then((res) => {
+    friendService.getFriendList().then((res) => {
       setTodos(res.items);
     });
   }, []);
 
   return (
-    <div>
-      <h1>Reactik app</h1>
-      <ul>
+    <Box>
+      <Typography variant="h4">Reactik app</Typography>
+      <List>
         {todos.map((item) => (
-          <li key={item.id}>{item.title}</li>
+          <ListItem key={item.id}>
+            <ListItemAvatar>
+              <Avatar>{nameToChildren(item.name)}</Avatar>
+            </ListItemAvatar>
+            <ListItemText>{item.name}</ListItemText>
+          </ListItem>
         ))}
-      </ul>
-    </div>
+      </List>
+    </Box>
   );
 }

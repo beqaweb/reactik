@@ -1,29 +1,29 @@
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
-export interface Todo {
+export interface Friend {
   id: string;
-  title: string;
+  name: string;
 }
 
-export class TodoService {
-  async getTodoList() {
+export class FriendService {
+  async getFriendList(): Promise<{ items: Friend[] }> {
     await sleep(2000);
     return {
       items: [
         {
           id: generateId(),
-          title: 'Todo 1',
+          name: 'John Doe',
         },
         {
           id: generateId(),
-          title: 'Todo 2',
+          name: 'Ben Doe',
         },
         {
           id: generateId(),
-          title: 'Todo 3',
+          name: 'Joel McDonalds',
         },
-      ] as Todo[],
+      ],
     };
   }
 }

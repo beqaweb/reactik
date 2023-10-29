@@ -20,8 +20,11 @@ export interface ModalProps<D = undefined, R = undefined> {
 }
 
 interface UseModal<D, R> {
-  open: (data?: D) => Promise<R>;
-  close: (result?: R) => void;
+  state: ModalState;
+  controls: {
+    open: (data?: D) => Promise<R>;
+    close: (result?: R) => void;
+  };
 }
 
 interface UseModalOptions<D> {
@@ -69,9 +72,7 @@ const ModalContext = createContext<ModalContextValue>({
   close: () => undefined,
 });
 
-export const ModalProvider: React.ComponentType<ModalProviderProps> = ({
-  children,
-}) => {
+export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const modalComponentsRef = useRef<ModalContextValue['modalComponents']>({});
   const modalResolversRef = useRef<ModalContextValue['modalResolvers']>({});
 
@@ -174,6 +175,11 @@ export const useModal = <D, R>(
 
   const modalId = useRef(options?.modalId || generateModalId()).current;
 
+  const modalState = useMemo(
+    () => context.modalStates[modalId],
+    [context.modalStates, modalId],
+  );
+
   const close: (result?: R) => void = useCallback((result) => {
     context.close(modalId, result);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,9 +199,12 @@ export const useModal = <D, R>(
 
   return useMemo<UseModal<D, R>>(
     () => ({
-      close,
-      open,
+      state: modalState,
+      controls: {
+        close,
+        open,
+      },
     }),
-    [close, open],
+    [modalState, close, open],
   );
 };

@@ -1,9 +1,9 @@
 import { createServiceContainer } from 'reactik';
 
-import { TodoService } from './TodoService';
+import { FriendService } from './FriendService';
 
 export const serviceContainer = createServiceContainer({
   services: {
-    todo: () => new TodoService(),
+    friendService: () => new FriendService(),
   },
 });

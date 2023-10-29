@@ -1,16 +1,57 @@
-import { PropsWithChildren } from 'react';
+import { ComponentType, FC, PropsWithChildren } from 'react';
+
+// Modal types
+
+interface DefaultModalProps {
+  open: boolean;
+}
+
+export interface ModalProps<D = undefined, R = undefined> {
+  data: D;
+  modalProps: DefaultModalProps;
+  close: (result?: R) => void;
+}
+
+interface ModalProviderProps extends PropsWithChildren {
+  maxModals?: number;
+}
+
+export declare const ModalProvider: FC<ModalProviderProps>;
+
+interface UseModalOptions<D> {
+  modalId?: string;
+  data?: D;
+}
+
+interface ModalState {
+  open: boolean;
+  data: unknown;
+}
+
+interface UseModal<D, R> {
+  state: ModalState;
+  controls: {
+    open: (data?: D) => Promise<R>;
+    close: (result?: R) => void;
+  };
+}
+
+export declare const useModal: <D, R>(
+  modalComponent: ComponentType<ModalProps<D, R>>,
+  options?: UseModalOptions<D>,
+) => UseModal<D, R>;
+
+// Service container types
 
 type ValidServiceType = () => Object | Promise<Object>;
 type Services = Record<string, ValidServiceType>;
 
-interface ServicesContextProvider<T extends Services = Services>
+interface ServicesContextProviderProps<T extends Services = Services>
   extends PropsWithChildren {
   services: T;
 }
 
-export declare const ServicesProvider: (
-  props: ServicesContextProvider,
-) => JSX.Element;
+export declare const ServicesProvider: FC<ServicesContextProviderProps>;
 
 interface CreateServiceContainerOptions<T extends Services> {
   services: T;
