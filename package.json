@@ -1,6 +1,6 @@
 {
   "name": "reactik",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "React library",
   "main": "dist/index.js",
   "module": "dist/index.js",
