@@ -8,6 +8,7 @@
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "start": "webpack --watch --config webpack.config.dev.js",
+    "test": "echo todo-test",
     "prerelease": "rimraf dist && npm run build",
     "release": "np --tag latest"
   },
