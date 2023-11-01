@@ -1,20 +1,20 @@
-export interface ProgressSubscription {
+interface ProgressSubscription {
   unsubscribe: () => void;
 }
 
-interface SubscribeOptions<T, E = unknown> {
+interface SubscribeListeners<T, E = unknown> {
   onEmit?: (result: T) => void;
   onError?: (error: E) => void;
   onFinish?: () => void;
 }
 
-export class Progress<T, E = unknown> {
-  private _emitCallbacks: Array<(result: T) => void> = [];
-  private _errorCallbacks: Array<(error: E) => void> = [];
-  private _finishCallbacks: Array<() => void> = [];
-  private _lastResult: T | undefined;
-  private _error: E | undefined;
-  private _finished: boolean = false;
+class Progress<T, E = unknown> {
+  private emitCallbacks: Array<(result: T) => void> = [];
+  private errorCallbacks: Array<(error: E) => void> = [];
+  private finishCallbacks: Array<() => void> = [];
+  private lastResult: T | undefined;
+  private error: E | undefined;
+  private finished: boolean = false;
 
   constructor(
     resolver: (
@@ -23,73 +23,102 @@ export class Progress<T, E = unknown> {
       finish: () => void,
     ) => void,
   ) {
-    resolver(this._emit, this._reject, this._finish);
+    resolver(
+      this.emit.bind(this),
+      this.reject.bind(this),
+      this.finish.bind(this),
+    );
   }
 
-  get lastResult() {
-    return this._lastResult;
-  }
-
-  get error() {
-    return this._error;
-  }
-
-  private _emit(result: T) {
-    if (this._finished) {
+  private emit(result: T) {
+    if (this.finished) {
       throw new Error('Cannot emit a new value to the progress once finished.');
     }
-    this._emitCallbacks.forEach((onEmit) => onEmit(result));
-    this._lastResult = result;
+    this.emitCallbacks.forEach((onEmit) => onEmit(result));
+    this.lastResult = result;
   }
 
-  private _reject(error: E) {
-    if (this._finished) {
+  private reject(error: E) {
+    if (this.finished) {
       throw new Error('Cannot reject the progress once finished.');
     }
-    this._error = error;
-    this._errorCallbacks.forEach((onError) => onError(error));
-    this._emitCallbacks = [];
-    this._errorCallbacks = [];
-    this._finishCallbacks = [];
+    this.error = error;
+    this.errorCallbacks.forEach((onError) => onError(error));
+    this.emitCallbacks = [];
+    this.errorCallbacks = [];
+    this.finishCallbacks = [];
   }
 
-  private _finish() {
-    if (this._finished) {
+  private finish() {
+    if (this.finished) {
       throw new Error('The progress was already finished.');
     }
-    this._finished = true;
-    this._finishCallbacks.forEach((onFinish) => onFinish());
-    this._emitCallbacks = [];
-    this._errorCallbacks = [];
-    this._finishCallbacks = [];
+    this.finished = true;
+    this.finishCallbacks.forEach((onFinish) => onFinish());
+    this.emitCallbacks = [];
+    this.errorCallbacks = [];
+    this.finishCallbacks = [];
   }
 
-  subscribe({
-    onEmit,
-    onError,
-    onFinish,
-  }: SubscribeOptions<T, E>): ProgressSubscription {
-    if (onEmit && !this._emitCallbacks.includes(onEmit)) {
-      this._emitCallbacks.push(onEmit);
+  getError() {
+    return this.error;
+  }
+
+  getLastResult() {
+    return this.lastResult;
+  }
+
+  subscribe(
+    onEmit: (result: T) => void,
+    onError?: (error: E) => void,
+    onFinish?: () => void,
+  ): ProgressSubscription;
+  subscribe(listeners: SubscribeListeners<T, E>): ProgressSubscription;
+
+  subscribe(
+    listenersOrOnEmit: SubscribeListeners<T, E> | ((result: T) => void),
+    onError?: (error: E) => void,
+    onFinish?: () => void,
+  ): ProgressSubscription {
+    const onEmitFinal =
+      typeof listenersOrOnEmit === 'object'
+        ? listenersOrOnEmit.onEmit
+        : listenersOrOnEmit;
+
+    const onErrorFinal =
+      typeof listenersOrOnEmit === 'object'
+        ? listenersOrOnEmit.onError
+        : onError;
+
+    const onFinishFinal =
+      typeof listenersOrOnEmit === 'object'
+        ? listenersOrOnEmit.onFinish
+        : onFinish;
+
+    if (onEmitFinal && !this.emitCallbacks.includes(onEmitFinal)) {
+      this.emitCallbacks.push(onEmitFinal);
     }
-    if (onError && !this._errorCallbacks.includes(onError)) {
-      this._errorCallbacks.push(onError);
+    if (onErrorFinal && !this.errorCallbacks.includes(onErrorFinal)) {
+      this.errorCallbacks.push(onErrorFinal);
     }
-    if (onFinish && !this._finishCallbacks.includes(onFinish)) {
-      this._finishCallbacks.push(onFinish);
+    if (onFinishFinal && !this.finishCallbacks.includes(onFinishFinal)) {
+      this.finishCallbacks.push(onFinishFinal);
     }
 
     return {
       unsubscribe: () => {
-        if (onEmit) {
-          this._emitCallbacks.splice(this._emitCallbacks.indexOf(onEmit), 1);
+        if (onEmitFinal) {
+          this.emitCallbacks.splice(this.emitCallbacks.indexOf(onEmitFinal), 1);
         }
-        if (onError) {
-          this._errorCallbacks.splice(this._errorCallbacks.indexOf(onError), 1);
+        if (onErrorFinal) {
+          this.errorCallbacks.splice(
+            this.errorCallbacks.indexOf(onErrorFinal),
+            1,
+          );
         }
-        if (onFinish) {
-          this._finishCallbacks.splice(
-            this._finishCallbacks.indexOf(onFinish),
+        if (onFinishFinal) {
+          this.finishCallbacks.splice(
+            this.finishCallbacks.indexOf(onFinishFinal),
             1,
           );
         }
@@ -97,3 +126,5 @@ export class Progress<T, E = unknown> {
     };
   }
 }
+
+export { Progress, type ProgressSubscription };

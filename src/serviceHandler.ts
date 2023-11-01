@@ -13,7 +13,7 @@ interface ServiceHandler<T, E = unknown> {
   state: ServiceHandlerState<T, E>;
 }
 
-export const useServiceHandler = <T, E = unknown>(
+const useServiceHandler = <T, E = unknown>(
   serviceMethod: () => Promise<T> | Progress<T, E>, // TODO: handle args
 ): ServiceHandler<T, E> => {
   const [state, setState] = useState<ServiceHandlerState<T, E>>({
@@ -80,3 +80,5 @@ export const useServiceHandler = <T, E = unknown>(
     [invoke, state],
   );
 };
+
+export { useServiceHandler };

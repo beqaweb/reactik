@@ -4,7 +4,7 @@
   "description": "React library",
   "main": "dist/index.js",
   "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/types/index.d.ts",
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "start": "webpack --watch --config webpack.config.dev.js",

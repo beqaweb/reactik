@@ -13,7 +13,7 @@ interface DefaultModalProps {
   open: boolean;
 }
 
-export interface ModalProps<D = undefined, R = undefined> {
+interface ModalProps<D = undefined, R = undefined> {
   data: D;
   modalProps: DefaultModalProps;
   close: (result?: R) => void;
@@ -72,7 +72,7 @@ const ModalContext = createContext<ModalContextValue>({
   close: () => undefined,
 });
 
-export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
+const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const modalComponentsRef = useRef<ModalContextValue['modalComponents']>({});
   const modalResolversRef = useRef<ModalContextValue['modalResolvers']>({});
 
@@ -167,7 +167,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   );
 };
 
-export const useModal = <D, R>(
+const useModal = <D, R>(
   modalComponent: React.ComponentType<ModalProps<D, R>>,
   options?: UseModalOptions<D>,
 ): UseModal<D, R> => {
@@ -208,3 +208,5 @@ export const useModal = <D, R>(
     [modalState, close, open],
   );
 };
+
+export { type ModalProps, useModal, ModalProvider };

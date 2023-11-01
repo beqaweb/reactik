@@ -24,9 +24,7 @@ interface ServicesContextProviderProps<T extends Services = Services>
   services: T;
 }
 
-export const ServicesProvider: React.FC<ServicesContextProviderProps> = (
-  props,
-) => {
+const ServicesProvider: React.FC<ServicesContextProviderProps> = (props) => {
   const { children, services } = props;
   const value = useMemo(() => ({ services }), [services]);
   return createElement(ServiceContainerContext.Provider, { value }, children);
@@ -38,30 +36,30 @@ interface CreateServiceContainerOptions<T extends Services> {
 
 interface ServiceContainer<T extends Services> {
   services: T;
-  useService: <K extends keyof T>(
-    identifier: K,
-  ) => ReturnType<ValidServiceType>;
+  useService: <K extends keyof T>(identifier: K) => ReturnType<T[K]>;
 }
 
-export const createServiceContainer = <T extends Services>(
+const createServiceContainer = <T extends Services>(
   options: CreateServiceContainerOptions<T>,
 ): ServiceContainer<T> => {
   const { services } = options;
 
-  const useService = <K extends keyof T>(identifier: K) => {
-    const { services } = useContext(ServiceContainerContext);
+  const useService = <K extends keyof T>(identifier: K): ReturnType<T[K]> => {
+    const context = useContext(ServiceContainerContext);
+    const contextServices = context.services as T;
 
-    if (!services.hasOwnProperty(identifier)) {
+    if (!contextServices.hasOwnProperty(identifier)) {
       throw new Error(
-        `'${identifier.toString()}' was not found in the service registry.`,
+        `'${identifier.toString()}' was not found in the service registry.` +
+          ` Services: ${Object.keys(contextServices).join(', ')}`,
       );
     }
 
-    const result = useMemo(() => {
-      const initService = (services as T)[identifier] as T[K];
-      return initService(); // initialize a service
-    }, [services, identifier]);
-    return result;
+    const initService = contextServices[identifier];
+
+    const serviceResult = useMemo(() => initService(), [initService]);
+
+    return serviceResult as ReturnType<T[K]>; // Initialize a service
   };
 
   return {
@@ -69,3 +67,5 @@ export const createServiceContainer = <T extends Services>(
     useService,
   };
 };
+
+export { createServiceContainer, ServicesProvider };
