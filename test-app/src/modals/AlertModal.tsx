@@ -13,7 +13,7 @@ type AlertModalData = {
   dismissText: string;
 };
 
-type AlertModalResult = boolean;
+type AlertModalResult = 'Y' | 'N';
 
 export const AlertModal = ({
   modalProps,
@@ -37,8 +37,8 @@ export const AlertModal = ({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => close(false)}>{data.dismissText}</Button>
-        <Button onClick={() => close(true)} autoFocus>
+        <Button onClick={() => close('Y')}>{data.dismissText}</Button>
+        <Button onClick={() => close('N')} autoFocus>
           {data.confirmText}
         </Button>
       </DialogActions>

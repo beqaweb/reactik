@@ -41,7 +41,7 @@ export declare const useModal: <D, R>(
   options?: UseModalOptions<D>,
 ) => UseModal<D, R>;
 
-// Service container types
+// Service types
 
 type ValidServiceType = () => Object | Promise<Object>;
 type Services = Record<string, ValidServiceType>;
@@ -65,3 +65,16 @@ interface ServiceContainer<T extends Services> {
 export declare const createServiceContainer: <T extends Services>(
   options: CreateServiceContainerOptions<T>,
 ) => ServiceContainer<T>;
+
+// Service handler types
+
+export interface ServiceHandlerState<T, E = undefined> {
+  isLoading: boolean;
+  response: T | null;
+  error: E | null;
+}
+
+export interface ServiceHandler<T, E = undefined> {
+  invoke: () => void;
+  state: ServiceHandlerState<T, E>;
+}

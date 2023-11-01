@@ -50,6 +50,13 @@ export const createServiceContainer = <T extends Services>(
 
   const useService = <K extends keyof T>(identifier: K) => {
     const { services } = useContext(ServiceContainerContext);
+
+    if (!services.hasOwnProperty(identifier)) {
+      throw new Error(
+        `'${identifier.toString()}' was not found in the service registry.`,
+      );
+    }
+
     const result = useMemo(() => {
       const initService = (services as T)[identifier] as T[K];
       return initService(); // initialize a service
