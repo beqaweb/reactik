@@ -2,12 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { Progress } from './progress';
 
-interface ServiceHandlerState<T, E = unknown> {
-  isLoading: boolean;
-  response: T | undefined;
-  error: E | undefined;
-}
-
 type InvokeCleanup = () => void;
 
 type ExtractResolveType<F> = F extends (...args: any[]) => Promise<infer T>
@@ -28,7 +22,11 @@ type ServiceHandler<
   E = ExtractRejectType<F>,
 > = [
   (...args: Parameters<F>) => InvokeCleanup, // invoke function
-  ServiceHandlerState<T, E>, // state
+  {
+    isLoading: boolean;
+    response: T | null;
+    error: E | null;
+  }, // state
 ];
 
 const useServiceHandler = <
@@ -36,12 +34,11 @@ const useServiceHandler = <
 >(
   serviceMethod: F,
 ): ServiceHandler<F> => {
-  const [state, setState] = useState<
-    ServiceHandlerState<ExtractResolveType<F>, ExtractRejectType<F>>
-  >({
+  // index 1 in ServiceHandler<F> is the state type
+  const [state, setState] = useState<ServiceHandler<F>[1]>({
     isLoading: false,
-    response: undefined,
-    error: undefined,
+    response: null,
+    error: null,
   });
 
   const invoke = useCallback(

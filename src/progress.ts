@@ -1,5 +1,12 @@
+const generateId = () => `${Date.now()}-${Math.random()}`;
+
+type SubId = ReturnType<typeof generateId>;
+
+type Cleanup = () => void;
+
 interface ProgressSubscription {
   unsubscribe: () => void;
+  onUnsubscribe: (listener: () => void) => void;
 }
 
 interface SubscribeListeners<T, E = unknown> {
@@ -9,9 +16,14 @@ interface SubscribeListeners<T, E = unknown> {
 }
 
 class Progress<T, E = unknown> {
-  private emitCallbacks: Array<(result: T, iteration?: number) => void> = [];
-  private errorCallbacks: Array<(error: E) => void> = [];
-  private finishCallbacks: Array<() => void> = [];
+  private emitCallbacks: Record<
+    SubId,
+    (result: T, iteration?: number) => Cleanup | void
+  > = {};
+  private errorCallbacks: Record<SubId, (error: E) => void> = {};
+  private finishCallbacks: Record<SubId, () => void> = {};
+  private emitCleanupListeners: Record<SubId, Cleanup> = {};
+  private unsubCleanupListeners: Record<SubId, Cleanup[]> = {};
   private lastResult: T | undefined;
   private error: E | undefined;
   private finished: boolean = false;
@@ -37,7 +49,16 @@ class Progress<T, E = unknown> {
     if (this.finished) {
       throw new Error('Cannot emit a new value to the progress once finished.');
     }
-    this.emitCallbacks.forEach((onEmit) => onEmit(result, this.iteration));
+    Object.values(this.emitCleanupListeners).forEach((onCleanup) => {
+      onCleanup && onCleanup();
+    });
+    this.emitCleanupListeners = {};
+    Object.entries(this.emitCallbacks).forEach(([subId, onEmit]) => {
+      const cleanup = onEmit(result, this.iteration);
+      if (cleanup) {
+        this.emitCleanupListeners[subId] = cleanup;
+      }
+    });
     this.lastResult = result;
     this.iteration += 1;
   }
@@ -47,10 +68,12 @@ class Progress<T, E = unknown> {
       throw new Error('Cannot reject the progress once finished.');
     }
     this.error = error;
-    this.errorCallbacks.forEach((onError) => onError(error));
-    this.emitCallbacks = [];
-    this.errorCallbacks = [];
-    this.finishCallbacks = [];
+    Object.values(this.errorCallbacks).forEach((onError) => onError(error));
+    this.emitCallbacks = {};
+    this.errorCallbacks = {};
+    this.finishCallbacks = {};
+    this.emitCleanupListeners = {};
+    this.unsubCleanupListeners = {};
   }
 
   private finish() {
@@ -58,10 +81,12 @@ class Progress<T, E = unknown> {
       throw new Error('The progress was already finished.');
     }
     this.finished = true;
-    this.finishCallbacks.forEach((onFinish) => onFinish());
-    this.emitCallbacks = [];
-    this.errorCallbacks = [];
-    this.finishCallbacks = [];
+    Object.values(this.finishCallbacks).forEach((onFinish) => onFinish());
+    this.emitCallbacks = {};
+    this.errorCallbacks = {};
+    this.finishCallbacks = {};
+    this.emitCleanupListeners = {};
+    this.unsubCleanupListeners = {};
   }
 
   getError() {
@@ -87,6 +112,8 @@ class Progress<T, E = unknown> {
     onError?: (error: E) => void,
     onFinish?: () => void,
   ): ProgressSubscription {
+    const subId = generateId();
+
     const onEmitFinal =
       typeof listenersOrOnEmit === 'object'
         ? listenersOrOnEmit.onEmit
@@ -102,33 +129,32 @@ class Progress<T, E = unknown> {
         ? listenersOrOnEmit.onFinish
         : onFinish;
 
-    if (onEmitFinal && !this.emitCallbacks.includes(onEmitFinal)) {
-      this.emitCallbacks.push(onEmitFinal);
+    if (onEmitFinal) {
+      this.emitCallbacks[subId] = onEmitFinal;
     }
-    if (onErrorFinal && !this.errorCallbacks.includes(onErrorFinal)) {
-      this.errorCallbacks.push(onErrorFinal);
+    if (onErrorFinal) {
+      this.errorCallbacks[subId] = onErrorFinal;
     }
-    if (onFinishFinal && !this.finishCallbacks.includes(onFinishFinal)) {
-      this.finishCallbacks.push(onFinishFinal);
+    if (onFinishFinal) {
+      this.finishCallbacks[subId] = onFinishFinal;
     }
 
     return {
       unsubscribe: () => {
-        if (onEmitFinal) {
-          this.emitCallbacks.splice(this.emitCallbacks.indexOf(onEmitFinal), 1);
+        const emitCleanup = this.emitCleanupListeners[subId];
+        emitCleanup && emitCleanup();
+        this.unsubCleanupListeners[subId].forEach((onCleanup) => onCleanup());
+        delete this.emitCallbacks[subId];
+        delete this.errorCallbacks[subId];
+        delete this.finishCallbacks[subId];
+        delete this.unsubCleanupListeners[subId];
+        delete this.emitCleanupListeners[subId];
+      },
+      onUnsubscribe: (onCleanup: () => void) => {
+        if (!this.unsubCleanupListeners[subId]) {
+          this.unsubCleanupListeners[subId] = [];
         }
-        if (onErrorFinal) {
-          this.errorCallbacks.splice(
-            this.errorCallbacks.indexOf(onErrorFinal),
-            1,
-          );
-        }
-        if (onFinishFinal) {
-          this.finishCallbacks.splice(
-            this.finishCallbacks.indexOf(onFinishFinal),
-            1,
-          );
-        }
+        this.unsubCleanupListeners[subId].push(onCleanup);
       },
     };
   }

@@ -35,8 +35,8 @@ export class TodoService {
     );
   }
 
-  watchTodoList(titleFilter?: string): Progress<Todo[], string> {
-    return new Progress((emit) => {
+  watchTodoList(titleFilter?: string): Progress<Todo[], 401 | 403> {
+    return new Progress((emit, reject, finish) => {
       emit(
         [
           {
@@ -91,6 +91,8 @@ export class TodoService {
               typeof titleFilter === 'undefined' || title.includes(titleFilter),
           ),
         );
+
+        finish();
       }, 6000);
     });
   }
