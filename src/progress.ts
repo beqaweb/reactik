@@ -3,18 +3,19 @@ interface ProgressSubscription {
 }
 
 interface SubscribeListeners<T, E = unknown> {
-  onEmit?: (result: T) => void;
+  onEmit?: (result: T, iteration?: number) => void;
   onError?: (error: E) => void;
   onFinish?: () => void;
 }
 
 class Progress<T, E = unknown> {
-  private emitCallbacks: Array<(result: T) => void> = [];
+  private emitCallbacks: Array<(result: T, iteration?: number) => void> = [];
   private errorCallbacks: Array<(error: E) => void> = [];
   private finishCallbacks: Array<() => void> = [];
   private lastResult: T | undefined;
   private error: E | undefined;
   private finished: boolean = false;
+  private iteration: number = 0;
 
   constructor(
     resolver: (
@@ -23,19 +24,22 @@ class Progress<T, E = unknown> {
       finish: () => void,
     ) => void,
   ) {
-    resolver(
-      this.emit.bind(this),
-      this.reject.bind(this),
-      this.finish.bind(this),
-    );
+    setTimeout(() => {
+      resolver(
+        this.emit.bind(this),
+        this.reject.bind(this),
+        this.finish.bind(this),
+      );
+    });
   }
 
   private emit(result: T) {
     if (this.finished) {
       throw new Error('Cannot emit a new value to the progress once finished.');
     }
-    this.emitCallbacks.forEach((onEmit) => onEmit(result));
+    this.emitCallbacks.forEach((onEmit) => onEmit(result, this.iteration));
     this.lastResult = result;
+    this.iteration += 1;
   }
 
   private reject(error: E) {
@@ -77,7 +81,9 @@ class Progress<T, E = unknown> {
   subscribe(listeners: SubscribeListeners<T, E>): ProgressSubscription;
 
   subscribe(
-    listenersOrOnEmit: SubscribeListeners<T, E> | ((result: T) => void),
+    listenersOrOnEmit:
+      | SubscribeListeners<T, E>
+      | ((result: T, iteration?: number) => void),
     onError?: (error: E) => void,
     onFinish?: () => void,
   ): ProgressSubscription {

@@ -1,3 +1,5 @@
+import { Progress } from 'reactik';
+
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const generateId = () => `${Date.now()}-${Math.random()}`;
 
@@ -33,5 +35,63 @@ export class TodoService {
     );
   }
 
-  // watchTodoList(titleFilter: string): Progress<> {}
+  watchTodoList(titleFilter?: string): Progress<Todo[], string> {
+    return new Progress((emit) => {
+      emit(
+        [
+          {
+            id: generateId(),
+            title: 'Finish the quarterly report',
+          },
+        ].filter(
+          ({ title }) =>
+            typeof titleFilter === 'undefined' || title.includes(titleFilter),
+        ),
+      );
+
+      setTimeout(() => {
+        emit(
+          [
+            {
+              id: generateId(),
+              title: 'Finish the quarterly report',
+            },
+            {
+              id: generateId(),
+              title: 'Send the marketing proposal to the client',
+            },
+          ].filter(
+            ({ title }) =>
+              typeof titleFilter === 'undefined' || title.includes(titleFilter),
+          ),
+        );
+      }, 3000);
+
+      setTimeout(() => {
+        emit(
+          [
+            {
+              id: generateId(),
+              title: 'Finish the quarterly report',
+            },
+            {
+              id: generateId(),
+              title: 'Send the marketing proposal to the client',
+            },
+            {
+              id: generateId(),
+              title: 'Schedule a team meeting for next week',
+            },
+            {
+              id: generateId(),
+              title: 'Respond to emails',
+            },
+          ].filter(
+            ({ title }) =>
+              typeof titleFilter === 'undefined' || title.includes(titleFilter),
+          ),
+        );
+      }, 6000);
+    });
+  }
 }

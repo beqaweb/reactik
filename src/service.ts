@@ -28,7 +28,18 @@ interface CreateServiceContainerOptions<T extends Services> {
 }
 
 interface ServiceContainer<T extends Services> {
+  /**
+   * Context provider for service container.
+   * Use to wrap your component(s) and provide
+   * services to them.
+   */
   Provider: React.FC<PropsWithChildren>;
+  /**
+   * React hook to use/reuse a specific service
+   * @param identifier Service name. Key from the services
+   * object provided into createServiceContainer()
+   * @returns Instance of the service
+   */
   useService: <K extends keyof T>(identifier: K) => ReturnType<T[K]>;
 }
 

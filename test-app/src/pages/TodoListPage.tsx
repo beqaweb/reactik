@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   Box,
   CircularProgress,
@@ -15,15 +15,15 @@ import { serviceContainer } from '../services';
 export const TodoListPage = () => {
   const todoService = serviceContainer.useService('todoService');
 
-  const getTodoList = useServiceHandler(todoService.getTodoList);
+  const [invokeWatchTodoList, todoListState] = useServiceHandler(
+    todoService.watchTodoList,
+  );
 
   useEffect(() => {
-    getTodoList.invoke();
-  }, [getTodoList.invoke]);
+    return invokeWatchTodoList('');
+  }, [invokeWatchTodoList]);
 
-  console.log(getTodoList);
-
-  if (getTodoList.state.isLoading) {
+  if (todoListState.isLoading) {
     return (
       <Box>
         <CircularProgress />
@@ -36,7 +36,7 @@ export const TodoListPage = () => {
       <Typography variant="h4">Todo list</Typography>
 
       <List>
-        {getTodoList.state.response?.map((item) => (
+        {todoListState.response?.map((item) => (
           <ListItem key={item.id}>
             <ListItemText>✅ {item.title}</ListItemText>
           </ListItem>

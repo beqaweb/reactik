@@ -2,7 +2,6 @@ import { useModal } from 'reactik';
 import { Box, Button } from '@mui/material';
 
 import { AlertModal } from '../modals/AlertModal';
-import { serviceContainer } from '../services';
 
 export const ModalsPage = () => {
   const alertDialog = useModal(AlertModal, {
@@ -12,8 +11,6 @@ export const ModalsPage = () => {
       dismissText: 'Disagree',
     },
   });
-
-  const todoService = serviceContainer.useService('todoService');
 
   const handleAlertOpenRequest = () => {
     // opens the alert modal and waits for result using promise
