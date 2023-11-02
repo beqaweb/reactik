@@ -6,7 +6,15 @@ import { TodoListPage } from './pages/TodoListPage';
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={null} />
+      <Route
+        path="/"
+        element={
+          <>
+            <ModalsPage />
+            <TodoListPage />
+          </>
+        }
+      />
       <Route path="/modals" element={<ModalsPage />} />
       <Route path="/todos" element={<TodoListPage />} />
     </Routes>

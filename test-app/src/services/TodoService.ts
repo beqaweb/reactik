@@ -7,7 +7,7 @@ export interface Todo {
 }
 
 export class TodoService {
-  async getTodoList(titleFilter: string = ''): Promise<Todo[]> {
+  async getTodoList(titleFilter?: string): Promise<Todo[]> {
     await sleep(2000);
 
     return [
@@ -27,7 +27,10 @@ export class TodoService {
         id: generateId(),
         title: 'Respond to emails',
       },
-    ].filter(({ title }) => title === titleFilter);
+    ].filter(
+      ({ title }) =>
+        typeof titleFilter === 'undefined' || title.includes(titleFilter),
+    );
   }
 
   // watchTodoList(titleFilter: string): Progress<> {}

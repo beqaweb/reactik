@@ -1,35 +1,44 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
+  CircularProgress,
   Divider,
   List,
   ListItem,
   ListItemText,
   Typography,
 } from '@mui/material';
+import { useServiceHandler } from 'reactik';
 
 import { serviceContainer } from '../services';
-import { Todo } from '../services/TodoService';
 
 export const TodoListPage = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
-
   const todoService = serviceContainer.useService('todoService');
 
+  const getTodoList = useServiceHandler(todoService.getTodoList);
+
   useEffect(() => {
-    todoService.getTodoList().then((result) => {
-      setTodos(result);
-    });
-  }, []);
+    getTodoList.invoke();
+  }, [getTodoList.invoke]);
+
+  console.log(getTodoList);
+
+  if (getTodoList.state.isLoading) {
+    return (
+      <Box>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
       <Typography variant="h4">Todo list</Typography>
 
       <List>
-        {todos.map((item) => (
+        {getTodoList.state.response?.map((item) => (
           <ListItem key={item.id}>
-            <ListItemText>{item.title}</ListItemText>
+            <ListItemText>✅ {item.title}</ListItemText>
           </ListItem>
         ))}
       </List>

@@ -6,47 +6,52 @@ import {
   useMemo,
 } from 'react';
 
-type ValidServiceType = () => Object | Promise<Object>;
-type Services = Record<string, ValidServiceType>;
+type ValidServiceType = Object;
+type ValidServiceInitializerType = () => ValidServiceType;
+type Services = Record<string, ValidServiceInitializerType>;
 
-interface ServiceContainerContextType<T> {
+interface ServiceContainerContextValue<T> {
   services: T;
 }
-
-const ServiceContainerContext = createContext<
-  ServiceContainerContextType<Services>
->({
-  services: {},
-});
-
-interface ServicesContextProviderProps<T extends Services = Services>
-  extends PropsWithChildren {
-  services: T;
-}
-
-const ServicesProvider: React.FC<ServicesContextProviderProps> = (props) => {
-  const { children, services } = props;
-  const value = useMemo(() => ({ services }), [services]);
-  return createElement(ServiceContainerContext.Provider, { value }, children);
-};
 
 interface CreateServiceContainerOptions<T extends Services> {
+  /**
+   * Object containing service creators where
+   * a service can be type of Object
+   */
   services: T;
+  /**
+   * Services specified in this array will be
+   * instantiated once and reused
+   */
+  reused: Array<keyof T>;
 }
 
 interface ServiceContainer<T extends Services> {
-  services: T;
+  Provider: React.FC<PropsWithChildren>;
   useService: <K extends keyof T>(identifier: K) => ReturnType<T[K]>;
 }
 
 const createServiceContainer = <T extends Services>(
   options: CreateServiceContainerOptions<T>,
 ): ServiceContainer<T> => {
-  const { services } = options;
+  const { services, reused } = options;
+
+  const reusableRegistry: Record<string, ValidServiceType> = {};
+
+  const Context = createContext<ServiceContainerContextValue<T>>({
+    services,
+  });
+
+  const Provider: React.FC<PropsWithChildren> = ({ children }) => {
+    // context value created/updated here
+    const value = useMemo(() => ({ services }), [services]);
+    return createElement(Context.Provider, { value }, children);
+  };
 
   const useService = <K extends keyof T>(identifier: K): ReturnType<T[K]> => {
-    const context = useContext(ServiceContainerContext);
-    const contextServices = context.services as T;
+    const context = useContext(Context);
+    const contextServices = context.services;
 
     if (!contextServices.hasOwnProperty(identifier)) {
       throw new Error(
@@ -57,15 +62,26 @@ const createServiceContainer = <T extends Services>(
 
     const initService = contextServices[identifier];
 
-    const serviceResult = useMemo(() => initService(), [initService]);
+    const serviceResult = useMemo(() => {
+      // if service name was added to `reused` array,
+      // then create instance once and then reuse it
+      if (reused && reused.includes(identifier)) {
+        if (!reusableRegistry.hasOwnProperty(identifier)) {
+          reusableRegistry[identifier as string] = initService();
+        }
+        return reusableRegistry[identifier as string] as ReturnType<T[K]>;
+      }
+
+      return initService();
+    }, [reused, initService]);
 
     return serviceResult as ReturnType<T[K]>; // Initialize a service
   };
 
   return {
-    services,
+    Provider,
     useService,
   };
 };
 
-export { createServiceContainer, ServicesProvider };
+export { createServiceContainer };

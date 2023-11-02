@@ -2,15 +2,15 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { Progress } from './progress';
 
-interface ServiceHandlerState<T, E = unknown> {
-  isLoading: boolean;
-  response: T | null;
-  error: E | null;
-}
-
 interface ServiceHandler<T, E = unknown> {
   invoke: () => void;
   state: ServiceHandlerState<T, E>;
+}
+
+interface ServiceHandlerState<T, E = unknown> {
+  isLoading: boolean;
+  response: T | undefined;
+  error: E | undefined;
 }
 
 const useServiceHandler = <T, E = unknown>(
@@ -18,8 +18,8 @@ const useServiceHandler = <T, E = unknown>(
 ): ServiceHandler<T, E> => {
   const [state, setState] = useState<ServiceHandlerState<T, E>>({
     isLoading: false,
-    response: null,
-    error: null,
+    response: undefined,
+    error: undefined,
   });
 
   const invoke = useCallback<() => void | (() => void)>(() => {

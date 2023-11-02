@@ -6,4 +6,5 @@ export const serviceContainer = createServiceContainer({
   services: {
     todoService: () => new TodoService(),
   },
+  reused: [],
 });

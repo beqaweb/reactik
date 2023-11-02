@@ -73,6 +73,7 @@ class Progress<T, E = unknown> {
     onError?: (error: E) => void,
     onFinish?: () => void,
   ): ProgressSubscription;
+
   subscribe(listeners: SubscribeListeners<T, E>): ProgressSubscription;
 
   subscribe(
