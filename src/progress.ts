@@ -114,6 +114,8 @@ class Progress<T, E = unknown> {
   ): ProgressSubscription {
     const subId = generateId();
 
+    this.unsubCleanupListeners[subId] = [];
+
     const onEmitFinal =
       typeof listenersOrOnEmit === 'object'
         ? listenersOrOnEmit.onEmit
@@ -143,7 +145,9 @@ class Progress<T, E = unknown> {
       unsubscribe: () => {
         const emitCleanup = this.emitCleanupListeners[subId];
         emitCleanup && emitCleanup();
-        this.unsubCleanupListeners[subId].forEach((onCleanup) => onCleanup());
+        if (this.unsubCleanupListeners[subId]) {
+          this.unsubCleanupListeners[subId].forEach((onCleanup) => onCleanup());
+        }
         delete this.emitCallbacks[subId];
         delete this.errorCallbacks[subId];
         delete this.finishCallbacks[subId];

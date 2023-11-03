@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { Progress } from './progress';
 
@@ -34,6 +34,8 @@ const useServiceHandler = <
 >(
   serviceMethod: F,
 ): ServiceHandler<F> => {
+  const serviceMethodInitial = useRef(serviceMethod).current;
+
   // index 1 in ServiceHandler<F> is the state type
   const [state, setState] = useState<ServiceHandler<F>[1]>({
     isLoading: false,
@@ -48,7 +50,7 @@ const useServiceHandler = <
         isLoading: true,
       }));
 
-      const promiseOrProgress = serviceMethod(...args);
+      const promiseOrProgress = serviceMethodInitial(...args);
 
       if (promiseOrProgress instanceof Promise) {
         promiseOrProgress
@@ -93,7 +95,7 @@ const useServiceHandler = <
 
       return () => undefined;
     },
-    [serviceMethod],
+    [serviceMethodInitial],
   );
 
   return useMemo(() => [invoke, state], [invoke, state]);

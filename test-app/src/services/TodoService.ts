@@ -96,4 +96,13 @@ export class TodoService {
       }, 6000);
     });
   }
+
+  async createTodo(title: string): Promise<Todo> {
+    await sleep(1500);
+
+    return {
+      id: generateId(),
+      title,
+    };
+  }
 }
