@@ -20,19 +20,29 @@ export const TodoListPage = () => {
     todoService.watchTodoList,
   );
 
-  const [invokeGetUsers, getUsersState] = useServiceHandler(
+  const [invokeGetUsers, userListState] = useServiceHandler(
     userService.getUsers,
   );
 
-  useEffect(() => {
-    return invokeWatchTodoList('');
-  }, [invokeWatchTodoList]);
+  const [invokeGetFirstUser, firstUserState] = useServiceHandler(
+    userService.getFirstUser,
+  );
 
-  useEffect(() => {
-    return invokeGetUsers();
-  }, [invokeGetUsers]);
+  // useEffect(() => {
+  //   return invokeWatchTodoList('');
+  // }, [invokeWatchTodoList]);
 
-  if (todoListState.isLoading || getUsersState.isLoading) {
+  // useEffect(() => {
+  //   return invokeGetUsers();
+  // }, [invokeGetUsers]);
+
+  // useEffect(() => {
+  //   return invokeGetFirstUser();
+  // }, [invokeGetFirstUser]);
+
+  // console.log(firstUserState);
+
+  if (todoListState.isLoading || userListState.isLoading) {
     return (
       <Box>
         <CircularProgress />
@@ -55,7 +65,7 @@ export const TodoListPage = () => {
       <Divider />
 
       <List>
-        {getUsersState.response?.data.map((item) => (
+        {userListState.response?.data.map((item) => (
           <ListItem key={item.id}>
             <ListItemText>
               User: {item.first_name + ' ' + item.last_name}

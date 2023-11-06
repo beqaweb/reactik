@@ -109,12 +109,17 @@ const createRequest = <T = any, E = any>(
       headers.set('accept', '*/*');
     }
 
+    const abortController = new AbortController();
+
     (async () => {
       try {
+        const signal = abortController.signal;
+
         const response = await fetch(url, {
           method,
           body,
           headers,
+          signal,
         });
 
         let finalResponse: T;
@@ -127,10 +132,16 @@ const createRequest = <T = any, E = any>(
         emit(finalResponse);
         finish();
       } catch (e: any) {
+        console.log(e);
         reject(e);
         finish();
       }
     })();
+
+    return () => {
+      // cancel request
+      abortController.abort();
+    };
   });
 };
 
@@ -265,4 +276,4 @@ class HttpClient {
   }
 }
 
-export { HttpClient };
+export { HttpClient, type HttpClientOptions };

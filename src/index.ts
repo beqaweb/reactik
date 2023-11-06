@@ -1,5 +1,9 @@
-export { Progress, type ProgressSubscription } from './progress';
+export {
+  Progress,
+  type ProgressSubscription,
+  ProgressController,
+} from './progress';
 export { ModalProvider, useModal, type ModalProps } from './modal';
-export { createServiceContainer } from './service';
+export { createServiceContainer } from './serviceContainer';
 export { useServiceHandler } from './serviceHandler';
-export { HttpClient } from './httpClient';
+export { HttpClient, type HttpClientOptions } from './httpClient';

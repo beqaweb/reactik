@@ -24,7 +24,7 @@ interface CreateServiceContainerOptions<T extends Services> {
    * Services specified in this array will be
    * instantiated once and reused
    */
-  reused: Array<keyof T>;
+  reused?: Array<keyof T>;
 }
 
 interface ServiceContainer<T extends Services> {

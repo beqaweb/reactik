@@ -8,5 +8,4 @@ export const serviceContainer = createServiceContainer({
     todoService: () => new TodoService(),
     userService: () => new UserService(),
   },
-  reused: [],
 });

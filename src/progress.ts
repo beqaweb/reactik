@@ -6,51 +6,52 @@ type Cleanup = () => void;
 
 interface ProgressSubscription {
   unsubscribe: () => void;
-  onUnsubscribe: (listener: () => void) => void;
+  onUnsubscribe: (listener: () => void) => Cleanup;
 }
 
-interface SubscribeListeners<T, E = unknown> {
+interface SubscribeListeners<T, E = any> {
   onEmit?: (result: T, iteration?: number) => void;
   onError?: (error: E) => void;
   onFinish?: () => void;
 }
 
-class Progress<T, E = unknown> {
+class Progress<T, E = any> {
+  private resolverCleanup?: void | (() => void);
   private emitCallbacks: Record<
     SubId,
     (result: T, iteration?: number) => Cleanup | void
   > = {};
-  private errorCallbacks: Record<SubId, (error: E) => void> = {};
+  private rejectCallbacks: Record<SubId, (error: E) => void> = {};
   private finishCallbacks: Record<SubId, () => void> = {};
   private emitCleanupListeners: Record<SubId, Cleanup> = {};
   private unsubCleanupListeners: Record<SubId, Cleanup[]> = {};
   private lastResult: T | undefined;
   private error: E | undefined;
-  private finished: boolean = false;
   private iteration: number = 0;
+  public isFinished: boolean = false;
 
   constructor(
     resolver: (
       emit: (result: T) => void,
       reject: (error: E) => void,
       finish: () => void,
-    ) => void,
+    ) => Cleanup | void,
   ) {
-    setTimeout(() => {
-      resolver(
-        this.emit.bind(this),
-        this.reject.bind(this),
-        this.finish.bind(this),
-      );
-    });
+    // setTimeout(() => {
+    this.resolverCleanup = resolver(
+      this.emit.bind(this),
+      this.reject.bind(this),
+      this.finish.bind(this),
+    );
+    // });
   }
 
   private emit(result: T) {
-    if (this.finished) {
+    if (this.isFinished) {
       throw new Error('Cannot emit a new value to the progress once finished.');
     }
     Object.values(this.emitCleanupListeners).forEach((onCleanup) => {
-      onCleanup && onCleanup();
+      onCleanup();
     });
     this.emitCleanupListeners = {};
     Object.entries(this.emitCallbacks).forEach(([subId, onEmit]) => {
@@ -64,26 +65,25 @@ class Progress<T, E = unknown> {
   }
 
   private reject(error: E) {
-    if (this.finished) {
+    if (this.isFinished) {
       throw new Error('Cannot reject the progress once finished.');
     }
     this.error = error;
-    Object.values(this.errorCallbacks).forEach((onError) => onError(error));
-    this.emitCallbacks = {};
-    this.errorCallbacks = {};
-    this.finishCallbacks = {};
-    this.emitCleanupListeners = {};
-    this.unsubCleanupListeners = {};
+    this.isFinished = true;
+    Object.values(this.rejectCallbacks).forEach((onError) => onError(error));
   }
 
   private finish() {
-    if (this.finished) {
+    if (this.isFinished) {
       throw new Error('The progress was already finished.');
     }
-    this.finished = true;
+    this.isFinished = true;
     Object.values(this.finishCallbacks).forEach((onFinish) => onFinish());
+  }
+
+  private deleteCallbacks() {
     this.emitCallbacks = {};
-    this.errorCallbacks = {};
+    this.rejectCallbacks = {};
     this.finishCallbacks = {};
     this.emitCleanupListeners = {};
     this.unsubCleanupListeners = {};
@@ -95,6 +95,18 @@ class Progress<T, E = unknown> {
 
   getLastResult() {
     return this.lastResult;
+  }
+
+  stop() {
+    // pop the stop logic to the end of call stack
+    // to make sure the logic is performed
+    // after a potential creation of progress
+    // (making sure this.resolverCleanup is not undefined)
+    setTimeout(() => {
+      this.resolverCleanup && this.resolverCleanup();
+      this.finish();
+      this.deleteCallbacks();
+    });
   }
 
   subscribe(
@@ -131,11 +143,30 @@ class Progress<T, E = unknown> {
         ? listenersOrOnEmit.onFinish
         : onFinish;
 
+    // if the progress was finished already
+    // give the subscriber last results (lastResult or error)
+    // and return noop (nothing to clean up),
+    // i.e. do not actually add as subscriber
+    if (this.isFinished) {
+      if (this.error) {
+        onErrorFinal && onErrorFinal(this.error);
+      } else {
+        onEmitFinal && onEmitFinal(this.lastResult as T, this.iteration);
+      }
+
+      return {
+        unsubscribe: () => undefined,
+        onUnsubscribe: () => {
+          return () => undefined;
+        },
+      };
+    }
+
     if (onEmitFinal) {
       this.emitCallbacks[subId] = onEmitFinal;
     }
     if (onErrorFinal) {
-      this.errorCallbacks[subId] = onErrorFinal;
+      this.rejectCallbacks[subId] = onErrorFinal;
     }
     if (onFinishFinal) {
       this.finishCallbacks[subId] = onFinishFinal;
@@ -148,20 +179,111 @@ class Progress<T, E = unknown> {
         if (this.unsubCleanupListeners[subId]) {
           this.unsubCleanupListeners[subId].forEach((onCleanup) => onCleanup());
         }
-        delete this.emitCallbacks[subId];
-        delete this.errorCallbacks[subId];
-        delete this.finishCallbacks[subId];
-        delete this.unsubCleanupListeners[subId];
         delete this.emitCleanupListeners[subId];
+        delete this.unsubCleanupListeners[subId];
+        delete this.emitCallbacks[subId];
+        delete this.rejectCallbacks[subId];
+        delete this.finishCallbacks[subId];
       },
-      onUnsubscribe: (onCleanup: () => void) => {
+      onUnsubscribe: (onCleanup: () => void): Cleanup => {
         if (!this.unsubCleanupListeners[subId]) {
           this.unsubCleanupListeners[subId] = [];
         }
         this.unsubCleanupListeners[subId].push(onCleanup);
+        return () => {
+          if (this.unsubCleanupListeners[subId]) {
+            const listeners = this.unsubCleanupListeners[subId];
+            listeners.splice(listeners.indexOf(onCleanup), 1);
+          }
+        };
       },
     };
   }
+
+  chain<CT, CE = any>(progress: (result: T) => Progress<CT, CE>) {
+    return new Progress<CT, CE | E>((emit, reject, finish) => {
+      const sub = this.subscribe(
+        (result) => {
+          const childProgress = progress(result);
+
+          const childProgressSub = childProgress.subscribe(
+            (childResult) => {
+              emit(childResult);
+            },
+            (error) => {
+              reject(error);
+            },
+            () => {
+              if (!this.isFinished) {
+                this.finish();
+              }
+              finish();
+            },
+          );
+
+          return () => {
+            childProgress.stop();
+            childProgressSub.unsubscribe();
+          };
+        },
+        (error) => {
+          reject(error);
+        },
+      );
+
+      return () => {
+        this.stop();
+        sub.unsubscribe();
+      };
+    });
+  }
 }
 
-export { Progress, type ProgressSubscription };
+class ProgressController<T, E = any> {
+  private emitCallbacks: Array<(result: T, iteration?: number) => void> = [];
+  private rejectCallbacks: Array<(error: E) => void> = [];
+  private finishCallbacks: Array<() => void> = [];
+
+  public lastResult?: T;
+  public error?: E;
+  public isFinished: boolean = false;
+
+  public emit(result: T) {
+    if (this.isFinished) {
+      throw new Error('Cannot emit a new value to the progress once finished.');
+    }
+    this.emitCallbacks.forEach((onEmit) => onEmit(result));
+    this.lastResult = result;
+  }
+
+  public reject(error: E) {
+    if (this.isFinished) {
+      throw new Error('Cannot reject the progress once finished.');
+    }
+    this.rejectCallbacks.forEach((onReject) => onReject(error));
+    this.error = error;
+  }
+
+  public finish() {
+    if (this.isFinished) {
+      throw new Error('The progress was already finished.');
+    }
+    this.isFinished = true;
+    this.finishCallbacks.forEach((onFinish) => onFinish());
+  }
+
+  public asProgress() {
+    return new Progress<T, E>((emit, reject, finish) => {
+      this.emitCallbacks.push(emit);
+      this.rejectCallbacks.push(reject);
+      this.finishCallbacks.push(finish);
+      return () => {
+        this.emitCallbacks.splice(this.emitCallbacks.indexOf(emit), 1);
+        this.rejectCallbacks.splice(this.rejectCallbacks.indexOf(reject), 1);
+        this.finishCallbacks.splice(this.finishCallbacks.indexOf(finish), 1);
+      };
+    });
+  }
+}
+
+export { Progress, type ProgressSubscription, ProgressController };

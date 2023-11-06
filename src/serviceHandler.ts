@@ -86,7 +86,10 @@ const useServiceHandler = <
           },
         });
 
-        return subscription.unsubscribe;
+        return () => {
+          promiseOrProgress.stop();
+          subscription.unsubscribe();
+        };
       } else {
         throw new Error(
           'Cannot handle the service method. Should return either Promise or Progress',
