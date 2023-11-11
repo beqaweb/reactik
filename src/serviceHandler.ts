@@ -1,45 +1,37 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-
-import { Progress } from './progress';
+import { Observable, from } from 'rxjs';
 
 type InvokeCleanup = () => void;
 
 type ExtractResolveType<F> = F extends (...args: any[]) => Promise<infer T>
   ? T
-  : F extends (...args: any[]) => Progress<infer T, any>
+  : F extends (...args: any[]) => Observable<infer T>
   ? T
-  : any;
-
-type ExtractRejectType<F> = F extends (
-  ...args: any[]
-) => Progress<infer T, infer E>
-  ? E
   : any;
 
 type ServiceHandler<
   F extends (...args: any[]) => any,
   T = ExtractResolveType<F>,
-  E = ExtractRejectType<F>,
-> = [
-  (...args: Parameters<F>) => InvokeCleanup, // invoke function
-  {
+> = {
+  invoke: (...args: Parameters<F>) => InvokeCleanup;
+  state: {
     isLoading: boolean;
-    response: T | null;
-    error: E | null;
-  }, // state
-];
+    result: T | null;
+    error: any;
+  };
+};
 
 const useServiceHandler = <
-  F extends (...args: any[]) => Promise<any> | Progress<any, any>,
+  F extends (...args: any[]) => Promise<any> | Observable<any>,
 >(
   serviceMethod: F,
 ): ServiceHandler<F> => {
   const serviceMethodInitial = useRef(serviceMethod).current;
 
   // index 1 in ServiceHandler<F> is the state type
-  const [state, setState] = useState<ServiceHandler<F>[1]>({
+  const [state, setState] = useState<ServiceHandler<F>['state']>({
     isLoading: false,
-    response: null,
+    result: null,
     error: null,
   });
 
@@ -50,58 +42,54 @@ const useServiceHandler = <
         isLoading: true,
       }));
 
-      const promiseOrProgress = serviceMethodInitial(...args);
+      let observable = serviceMethodInitial(...args);
 
-      if (promiseOrProgress instanceof Promise) {
-        promiseOrProgress
-          .then((result) => {
-            setState((currentState) => ({
-              ...currentState,
-              isLoading: false,
-              response: result,
-            }));
-          })
-          .catch((error) => {
-            setState((currentState) => ({
-              ...currentState,
-              isLoading: false,
-              error: error,
-            }));
-          });
-      } else if (promiseOrProgress instanceof Progress) {
-        const subscription = promiseOrProgress.subscribe({
-          onEmit: (result) => {
-            setState((currentState) => ({
-              ...currentState,
-              isLoading: false,
-              response: result,
-            }));
-          },
-          onError: (error) => {
-            setState((currentState) => ({
-              ...currentState,
-              isLoading: false,
-              error: error,
-            }));
-          },
-        });
-
-        return () => {
-          promiseOrProgress.stop();
-          subscription.unsubscribe();
-        };
-      } else {
-        throw new Error(
-          'Cannot handle the service method. Should return either Promise or Progress',
-        );
+      if (observable instanceof Promise) {
+        observable = from(observable);
       }
 
-      return () => undefined;
+      const subscription = observable.subscribe({
+        next: (result) => {
+          setState((currentState) => ({
+            ...currentState,
+            isLoading: false,
+            result: result,
+          }));
+        },
+        error: (error) => {
+          setState((currentState) => ({
+            ...currentState,
+            isLoading: false,
+            error: error,
+          }));
+        },
+      });
+
+      return () => {
+        setState((currentState) => {
+          if (currentState.isLoading) {
+            return {
+              ...currentState,
+              isLoading: false,
+            };
+          }
+          // return same state so that the
+          // component doesn't rerender
+          return currentState;
+        });
+        subscription.unsubscribe();
+      };
     },
     [serviceMethodInitial],
   );
 
-  return useMemo(() => [invoke, state], [invoke, state]);
+  return useMemo(
+    () => ({
+      invoke,
+      state,
+    }),
+    [invoke, state],
+  );
 };
 
 export { useServiceHandler };

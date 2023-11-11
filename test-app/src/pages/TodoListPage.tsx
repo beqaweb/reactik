@@ -16,31 +16,20 @@ export const TodoListPage = () => {
   const todoService = serviceContainer.useService('todoService');
   const userService = serviceContainer.useService('userService');
 
-  const [invokeWatchTodoList, todoListState] = useServiceHandler(
-    todoService.watchTodoList,
-  );
+  const { invoke: invokeWatchTodoList, state: todoListState } =
+    useServiceHandler(todoService.watchTodoList);
 
-  const [invokeGetUsers, userListState] = useServiceHandler(
+  const { invoke: invokeGetUsers, state: userListState } = useServiceHandler(
     userService.getUsers,
   );
 
-  const [invokeGetFirstUser, firstUserState] = useServiceHandler(
-    userService.getFirstUser,
-  );
+  useEffect(() => {
+    return invokeWatchTodoList('');
+  }, [invokeWatchTodoList]);
 
-  // useEffect(() => {
-  //   return invokeWatchTodoList('');
-  // }, [invokeWatchTodoList]);
-
-  // useEffect(() => {
-  //   return invokeGetUsers();
-  // }, [invokeGetUsers]);
-
-  // useEffect(() => {
-  //   return invokeGetFirstUser();
-  // }, [invokeGetFirstUser]);
-
-  // console.log(firstUserState);
+  useEffect(() => {
+    return invokeGetUsers();
+  }, [invokeGetUsers]);
 
   if (todoListState.isLoading || userListState.isLoading) {
     return (
@@ -50,12 +39,14 @@ export const TodoListPage = () => {
     );
   }
 
+  console.log(todoListState);
+
   return (
     <Box>
       <Typography variant="h4">Todo list</Typography>
 
       <List>
-        {todoListState.response?.map((item) => (
+        {todoListState.result?.map((item) => (
           <ListItem key={item.id}>
             <ListItemText>✅ {item.title}</ListItemText>
           </ListItem>
@@ -65,7 +56,7 @@ export const TodoListPage = () => {
       <Divider />
 
       <List>
-        {userListState.response?.data.map((item) => (
+        {userListState.result?.response?.data.map((item) => (
           <ListItem key={item.id}>
             <ListItemText>
               User: {item.first_name + ' ' + item.last_name}

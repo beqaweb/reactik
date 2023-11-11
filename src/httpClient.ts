@@ -1,4 +1,7 @@
-import { Progress } from './progress';
+import { BehaviorSubject, Observable, mergeMap, tap } from 'rxjs';
+import { AjaxResponse, ajax } from 'rxjs/ajax';
+
+const generateId = (): string => `${Math.random()}`.replace('0-', 'http-');
 
 interface Params {
   [key: string]: string | number | boolean;
@@ -7,7 +10,6 @@ interface RequestData {
   [key: string]: string | number | boolean | File;
 }
 type AuthType = 'basic' | 'bearer';
-type DataType = 'text' | 'json';
 type ContentType = 'text' | 'json';
 
 const stringifyParamsObj = (params: Params = {}): string => {
@@ -54,22 +56,67 @@ const convertDataToRequestBody = (
   return JSON.stringify(data);
 };
 
+const headersToObject = (headers: Headers) => {
+  return Array.from(headers.entries()).reduce(
+    (acc, [key, value]) => ({ ...acc, [key]: value }),
+    {},
+  );
+};
+
+const calculateProgressPercentage = (response: AjaxResponse<any>) => {
+  return Math.round(
+    response.total === 0 ? 100 : (response.loaded / response.total) * 100,
+  );
+};
+
+interface BasicAuthCredentials {
+  username: string;
+  password: string;
+}
+
+class RequestObservable<T extends AjaxResponse<any>> extends Observable<T> {
+  chain(transfer: (value: T, index: number) => any) {
+    return this.pipe(mergeMap(transfer));
+  }
+
+  trackUploadProgress(tracker: BehaviorSubject<number>) {
+    return this.pipe(
+      tap((response) => {
+        if (response.type.includes('upload')) {
+          tracker.next(calculateProgressPercentage(response));
+        }
+      }),
+    ) as RequestObservable<T>;
+  }
+
+  trackDownloadProgress(tracker: BehaviorSubject<number>) {
+    return this.pipe(
+      tap((response) => {
+        if (response.type.includes('download')) {
+          tracker.next(calculateProgressPercentage(response));
+        }
+      }),
+    ) as RequestObservable<T>;
+  }
+}
+
 interface RequestOptions {
+  id: string;
   url: string;
   type: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   uriParams?: Params;
   pathParams?: Params;
   data?: RequestData | string;
-  contentType?: ContentType;
-  accept?: ContentType;
+  headers?: Record<string, any>;
   auth?: boolean;
-  authToken?: string;
+  authToken?: string | BasicAuthCredentials;
+  authType?: AuthType;
+  includeUploadProgress?: boolean;
+  includeDownloadProgress?: boolean;
 }
 
-const createRequest = <T = any, E = any>(
-  options: RequestOptions,
-): Progress<T, E> => {
-  return new Progress((emit, reject, finish) => {
+const createRequest = <T = any>(options: RequestOptions) => {
+  return new RequestObservable<AjaxResponse<T>>((sub) => {
     const method = options.type;
 
     const urlAndPath = fixPathParamsInUrl(options.url, options.pathParams);
@@ -82,66 +129,65 @@ const createRequest = <T = any, E = any>(
 
     const body = options.data ? convertDataToRequestBody(options.data) : null;
 
-    const headers: Headers = new Headers();
+    const headers: Record<string, any> = {};
 
     if (options.auth) {
       if (options.authToken) {
-        headers.set('Authorization', options.authToken);
-      } else {
-        throw new Error(
-          'Request could not be authorized, because authToken is undefined.',
+        const authToken = credentialsToAuthorizationToken(
+          typeof options.authToken === 'string'
+            ? options.authToken
+            : {
+                username: options.authToken.username,
+                password: options.authToken.password,
+              },
+          options.authType || 'bearer',
         );
-      }
-    }
 
-    if (options.contentType === 'text') {
-      headers.set('content-type', 'application/x-www-form-urlencoded');
-    } else if (options.contentType === 'json') {
-      headers.set('content-type', 'application/json');
-    }
-
-    if (options.accept === 'text') {
-      headers.set('accept', 'application/x-www-form-urlencoded');
-    } else if (options.accept === 'json') {
-      headers.set('accept', 'application/json');
-    } else {
-      // default to */*
-      headers.set('accept', '*/*');
-    }
-
-    const abortController = new AbortController();
-
-    (async () => {
-      try {
-        const signal = abortController.signal;
-
-        const response = await fetch(url, {
-          method,
-          body,
-          headers,
-          signal,
-        });
-
-        let finalResponse: T;
-        try {
-          finalResponse = await response.json();
-        } catch (e) {
-          finalResponse = (await response.text()) as T;
+        if (authToken) {
+          headers['Authorization'] = authToken;
+        } else {
+          sub.error(
+            new Error('Authorization token is not valid.', {
+              cause: 'auth_token_error',
+            }),
+          );
+          sub.complete();
+          return;
         }
-
-        emit(finalResponse);
-        finish();
-      } catch (e: any) {
-        console.log(e);
-        reject(e);
-        finish();
+      } else {
+        sub.error(
+          new Error(
+            'Request could not be authorized, because authToken is undefined.',
+            { cause: 'no_auth_token_set' },
+          ),
+        );
+        sub.complete();
+        return;
       }
-    })();
+    }
 
-    return () => {
-      // cancel request
-      abortController.abort();
-    };
+    const ajaxSub = ajax<T>({
+      url,
+      method,
+      body,
+      headers,
+      includeUploadProgress: true,
+      includeDownloadProgress: true,
+    }).subscribe({
+      next: (result) => {
+        sub.next(result);
+      },
+      error: (error) => {
+        sub.error(error);
+      },
+      complete: () => {
+        sub.complete();
+      },
+    });
+
+    sub.add(() => {
+      ajaxSub.unsubscribe();
+    });
   });
 };
 
@@ -150,130 +196,164 @@ const createRequest = <T = any, E = any>(
 interface HttpClientOptions {
   baseURL?: string;
   authType?: AuthType;
-  contentType?: ContentType;
-  accept?: ContentType;
+  headers?: Record<string, any>;
 }
 
-interface ReuqestOptions {
+interface HttpClientRequestOptions {
   uriParams?: Params;
   pathParams?: Params;
-  contentType?: ContentType;
-  accept?: ContentType;
   auth?: boolean;
-  authToken?: string;
+  authToken?: string | BasicAuthCredentials;
+  authType?: AuthType;
+  headers?: Record<string, any>;
+  includeUploadProgress?: boolean;
+  includeDownloadProgress?: boolean;
 }
 
 const defaultOptions: HttpClientOptions = {
   baseURL: '',
 };
 
+const credentialsToAuthorizationToken = (
+  token: string | BasicAuthCredentials,
+  authType: AuthType,
+): string | undefined => {
+  if (authType === 'basic') {
+    if (typeof token === 'string') {
+      throw new Error(
+        'If you choose basic authorization, pass {username: string, password: string} instead of a string.',
+      );
+    } else if (!token.password) {
+      throw new Error(
+        'Password should not be undefined in basic authorization.',
+      );
+    }
+    return `Basic ${window.btoa(`${token.username}:${token.password}`)}`;
+  } else if (authType === 'bearer') {
+    if (typeof token !== 'string') {
+      throw new Error('authToken should be string.');
+    }
+    return `Bearer ${token}`;
+  }
+  return;
+};
+
 class HttpClient {
   private options: HttpClientOptions;
   private authToken?: string;
+  private uploadProgress: Record<string, BehaviorSubject<number>> = {};
+  private downloadProgress: Record<string, BehaviorSubject<number>> = {};
 
   constructor(options?: HttpClientOptions) {
     this.options = Object.assign(defaultOptions, options || {});
   }
 
-  setAuthorizationToken(authToken: string): void;
-  setAuthorizationToken(username: string, password: string): void;
+  setAuthorization(authToken: string): void;
+  setAuthorization(username: string, password: string): void;
 
-  setAuthorizationToken(authTokenOrUsername: string, password?: string) {
-    if (this.options.authType === 'basic') {
-      if (!password) {
-        throw new Error('Password should not be undefined.');
-      }
-      this.authToken = `Basic ${window.btoa(
-        `${authTokenOrUsername}:${password}`,
-      )}`;
-    }
-    if (this.options.authType === 'bearer') {
-      this.authToken = `Bearer ${authTokenOrUsername}`;
-    }
+  setAuthorization(authTokenOrUsername: string, password: string = '') {
+    this.authToken = credentialsToAuthorizationToken(
+      typeof authTokenOrUsername === 'string'
+        ? authTokenOrUsername
+        : { username: authTokenOrUsername, password },
+      this.options.authType || 'bearer',
+    );
   }
 
-  GET<T, E = any>(uri: string, options: ReuqestOptions = {}): Progress<T, E> {
-    return createRequest<T, E>({
+  GET<T>(uri: string, options: HttpClientRequestOptions = {}) {
+    const id = generateId();
+
+    return createRequest<T>({
+      id,
       url: (this.options.baseURL || '') + uri,
       type: 'GET',
       uriParams: options.uriParams || {},
       pathParams: options.pathParams || {},
-      contentType: options.contentType || this.options.contentType,
-      accept: options.accept,
+      headers: options.headers || this.options.headers || {},
       auth: Boolean(options.auth),
       authToken: options.authToken || this.authToken,
+      authType: options.authType || this.options.authType,
     });
   }
 
-  POST<T, E = any>(
+  POST<T>(
     uri: string,
     data: RequestData = {},
-    options: ReuqestOptions = {},
-  ): Progress<T, E> {
-    return createRequest<T, E>({
+    options: HttpClientRequestOptions = {},
+  ) {
+    const id = generateId();
+
+    return createRequest<T>({
+      id,
       url: (this.options.baseURL || '') + uri,
       type: 'POST',
       data,
       uriParams: options.uriParams || {},
       pathParams: options.pathParams || {},
-      contentType: options.contentType || this.options.contentType,
-      accept: options.accept,
+      headers: options.headers || this.options.headers || {},
       auth: Boolean(options.auth),
       authToken: options.authToken || this.authToken,
+      authType: options.authType || this.options.authType,
     });
   }
 
-  PUT<T, E = any>(
+  PUT<T>(
     uri: string,
     data: RequestData = {},
-    options: ReuqestOptions = {},
-  ): Progress<T, E> {
-    return createRequest<T, E>({
+    options: HttpClientRequestOptions = {},
+  ) {
+    const id = generateId();
+
+    return createRequest<T>({
+      id,
       url: (this.options.baseURL || '') + uri,
       type: 'PUT',
       data,
       uriParams: options.uriParams || {},
       pathParams: options.pathParams || {},
-      contentType: options.contentType || this.options.contentType,
-      accept: options.accept,
+      headers: options.headers || this.options.headers || {},
       auth: Boolean(options.auth),
       authToken: options.authToken || this.authToken,
+      authType: options.authType || this.options.authType,
     });
   }
 
-  PATCH<T, E = any>(
+  PATCH<T>(
     uri: string,
     data: RequestData = {},
-    options: ReuqestOptions = {},
-  ): Progress<T, E> {
-    return createRequest<T, E>({
+    options: HttpClientRequestOptions = {},
+  ) {
+    const id = generateId();
+
+    return createRequest<T>({
+      id,
       url: (this.options.baseURL || '') + uri,
       type: 'PATCH',
       data,
       uriParams: options.uriParams || {},
       pathParams: options.pathParams || {},
-      contentType: options.contentType || this.options.contentType,
-      accept: options.accept,
+      headers: options.headers || this.options.headers || {},
       auth: Boolean(options.auth),
       authToken: options.authToken || this.authToken,
+      authType: options.authType || this.options.authType,
     });
   }
 
-  DELETE<T, E = any>(
-    uri: string,
-    options: ReuqestOptions = {},
-  ): Progress<T, E> {
-    return createRequest<T, E>({
+  DELETE<T>(uri: string, options: HttpClientRequestOptions = {}) {
+    const id = generateId();
+
+    return createRequest<T>({
+      id,
       url: (this.options.baseURL || '') + uri,
       type: 'DELETE',
       uriParams: options.uriParams || {},
       pathParams: options.pathParams || {},
-      contentType: options.contentType || this.options.contentType,
-      accept: options.accept,
+      headers: options.headers || this.options.headers || {},
       auth: Boolean(options.auth),
       authToken: options.authToken || this.authToken,
+      authType: options.authType || this.options.authType,
     });
   }
 }
 
-export { HttpClient, type HttpClientOptions };
+export { RequestObservable, HttpClient, type HttpClientOptions };

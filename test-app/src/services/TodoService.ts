@@ -1,4 +1,4 @@
-import { Progress } from 'reactik';
+import { Observable } from 'rxjs';
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const generateId = () => `${Date.now()}-${Math.random()}`;
@@ -35,9 +35,9 @@ export class TodoService {
     );
   }
 
-  watchTodoList(titleFilter?: string): Progress<Todo[], 401 | 403> {
-    return new Progress((emit, reject, finish) => {
-      emit(
+  watchTodoList(titleFilter?: string) {
+    return new Observable<Todo[]>((sub) => {
+      sub.next(
         [
           {
             id: generateId(),
@@ -50,7 +50,7 @@ export class TodoService {
       );
 
       setTimeout(() => {
-        emit(
+        sub.next(
           [
             {
               id: generateId(),
@@ -68,7 +68,7 @@ export class TodoService {
       }, 3000);
 
       setTimeout(() => {
-        emit(
+        sub.next(
           [
             {
               id: generateId(),
@@ -92,7 +92,7 @@ export class TodoService {
           ),
         );
 
-        finish();
+        sub.complete();
       }, 6000);
     });
   }

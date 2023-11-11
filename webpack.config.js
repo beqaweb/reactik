@@ -10,16 +10,6 @@ module.exports = {
     libraryTarget: 'umd',
     library: 'reactik',
   },
-  // plugins: [
-  //   new CopyWebpackPlugin({
-  //     patterns: [
-  //       {
-  //         from: path.resolve(__dirname, 'src/types.ts'),
-  //         to: path.resolve(__dirname, 'dist/index.d.ts'),
-  //       },
-  //     ],
-  //   }),
-  // ],
   module: {
     rules: [
       {
